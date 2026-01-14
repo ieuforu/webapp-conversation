@@ -51,7 +51,7 @@ const Sidebar: FC<ISidebarProps> = ({
   }
   return (
     <div
-      className="h-full shrink-0 flex flex-col overflow-y-auto  xl:w-[244px] lg:w-[192px] sm:w-[240px]  border-r border-gray-200"
+      className="w-full h-full shrink-0 flex flex-col overflow-y-auto  xl:w-[244px] lg:w-[192px] sm:w-[240px]  border-r border-gray-200"
     >
       {/* title */}
       <div className='flex items-center justify-between px-4 py-5 border-b border-gray-100'>

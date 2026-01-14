@@ -699,8 +699,8 @@ const Main: FC<IMainProps> = () => {
         {/* sidebar */}
         {!isMobile && !isSidebarCollapsed && renderSidebar()}
         {isMobile && isShowSidebar && (
-          <div onClick={hideSidebar} >
-            <div className='inline-block' onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={hideSidebar}>
+            <div className='w-[280px] h-full bg-white shadow-xl' onClick={e => e.stopPropagation()}>
               {renderSidebar()}
             </div>
           </div>
@@ -720,22 +720,37 @@ const Main: FC<IMainProps> = () => {
             onInputsChange={setCurrInputs}
           ></ConfigSence> */}
 
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className={cn(
-              'fixed top-4 z-50 p-2 rounded-lg bg-white hover:bg-gray-100 active:bg-gray-200 transition-all duration-300 shadow-sm border border-gray-200',
-              isSidebarCollapsed ? 'left-4' : 'left-[260px]',
-            )}
-            aria-label={isSidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
-          >
-            <TextOutdentIcon
-              size={20}
-              className={cn(
-                'text-gray-500 transition-transform duration-300',
-                isSidebarCollapsed && 'rotate-180',
-              )}
-            />
-          </button>
+          {
+            isMobile
+              ? (
+                <button
+                  onClick={showSidebar}
+                  className='fixed top-4 left-4 z-50 p-2 rounded-lg bg-white hover:bg-gray-100 active:bg-gray-200 shadow-sm border border-gray-200'
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )
+              : (
+                <button
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  className={cn(
+                    'fixed top-4 z-50 p-2 rounded-lg bg-white hover:bg-gray-100 active:bg-gray-200 transition-all duration-300 shadow-sm border border-gray-200',
+                    isSidebarCollapsed ? 'left-4' : 'left-[260px]',
+                  )}
+                  aria-label={isSidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+                >
+                  <TextOutdentIcon
+                    size={20}
+                    className={cn(
+                      'text-gray-500 transition-transform duration-300',
+                      isSidebarCollapsed && 'rotate-180',
+                    )}
+                  />
+                </button>
+              )
+          }
 
           {/* chat list main wrapper */}
           <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
