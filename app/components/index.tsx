@@ -7,8 +7,6 @@ import { useBoolean, useGetState } from 'ahooks'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
-import ConfigSence from '@/app/components/config-scence'
-import Header from '@/app/components/header'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
@@ -22,6 +20,8 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { TextOutdentIcon } from '@phosphor-icons/react'
+import cn from 'classnames'
 
 export interface IMainProps {
   params: any
@@ -32,6 +32,7 @@ const Main: FC<IMainProps> = () => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const hasSetAppConfig = APP_ID && API_KEY
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isMobile)
 
   /*
   * app info
@@ -51,7 +52,7 @@ const Main: FC<IMainProps> = () => {
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
 
   useEffect(() => {
-    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
+    if (APP_INFO?.title) { document.title = `${APP_INFO.title}` }
   }, [APP_INFO?.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
@@ -92,11 +93,11 @@ const Main: FC<IMainProps> = () => {
     // parse variables in introduction
     setChatList(generateNewChatListWithOpenStatement('', inputs))
   }
-  const hasSetInputs = (() => {
-    if (!isNewConversation) { return true }
+  // const hasSetInputs = (() => {
+  //   if (!isNewConversation) { return true }
 
-    return isChatStarted
-  })()
+  //   return isChatStarted
+  // })()
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
   const conversationIntroduction = currConversationInfo?.introduction || ''
@@ -159,6 +160,8 @@ const Main: FC<IMainProps> = () => {
     if (id === '-1') {
       createNewChat()
       setConversationIdChangeBecauseOfNew(true)
+      // 直接开始聊天
+      setChatStarted()
     }
     else {
       setConversationIdChangeBecauseOfNew(false)
@@ -634,12 +637,46 @@ const Main: FC<IMainProps> = () => {
     notify({ type: 'success', message: t('common.api.success') })
   }
 
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/conversations/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (res.ok) {
+      Toast.notify({ type: 'success', message: '删除会话成功' })
+      setConversationList(prev => prev.filter(c => c.id !== id))
+      if (id === currConversationId) {
+        const remaining = conversationList.filter(c => c.id !== id)
+        handleConversationIdChange(remaining[0]?.id || '-1')
+      }
+    }
+  }
+
+  const handleRename = async (id: string, newName: string) => {
+    const res = await fetch(`/api/conversations/${id}/name`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newName,
+        auto_generate: false,
+      }),
+    })
+
+    if (res.ok) {
+      Toast.notify({ type: 'success', message: '重命名会话成功' })
+      setConversationList(prev =>
+        prev.map(conv => conv.id === id ? { ...conv, name: newName } : conv),
+      )
+    }
+  }
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
     return (
       <Sidebar
         list={conversationList}
         onCurrentIdChange={handleConversationIdChange}
+        onRename={handleRename}
+        onDelete={handleDelete}
         currentId={currConversationId}
         copyRight={APP_INFO.copyright || APP_INFO.title}
       />
@@ -651,26 +688,27 @@ const Main: FC<IMainProps> = () => {
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
-    <div className='bg-gray-100'>
-      <Header
+    <div className='h-full'>
+      {/* <Header
         title={APP_INFO.title}
         isMobile={isMobile}
         onShowSideBar={showSidebar}
         onCreateNewChat={() => handleConversationIdChange('-1')}
-      />
-      <div className="flex rounded-t-2xl bg-white overflow-hidden">
+      /> */}
+      <div className="flex h-full bg-[#E9EAF1] overflow-hidden">
         {/* sidebar */}
-        {!isMobile && renderSidebar()}
+        {!isMobile && !isSidebarCollapsed && renderSidebar()}
         {isMobile && isShowSidebar && (
-          <div className='fixed inset-0 z-50' style={{ backgroundColor: 'rgba(35, 56, 118, 0.2)' }} onClick={hideSidebar} >
+          <div onClick={hideSidebar} >
             <div className='inline-block' onClick={e => e.stopPropagation()}>
               {renderSidebar()}
             </div>
           </div>
         )}
         {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
-          <ConfigSence
+        <div className='relative flex-1 rounded-2xl bg-white shadow-sm flex flex-col h-full overflow-y-auto'>
+          {/* 欢迎卡片，每次要start chat */}
+          {/* <ConfigSence
             conversationName={conversationName}
             hasSetInputs={hasSetInputs}
             isPublicVersion={isShowPrompt}
@@ -680,22 +718,37 @@ const Main: FC<IMainProps> = () => {
             canEditInputs={canEditInputs}
             savedInputs={currInputs as Record<string, any>}
             onInputsChange={setCurrInputs}
-          ></ConfigSence>
+          ></ConfigSence> */}
 
-          {
-            hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
-                <Chat
-                  chatList={chatList}
-                  onSend={handleSend}
-                  onFeedback={handleFeedback}
-                  isResponding={isResponding}
-                  checkCanSend={checkCanSend}
-                  visionConfig={visionConfig}
-                  fileConfig={fileConfig}
-                />
-              </div>)
-          }
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className={cn(
+              'fixed top-4 z-50 p-2 rounded-lg bg-white hover:bg-gray-100 active:bg-gray-200 transition-all duration-300 shadow-sm border border-gray-200',
+              isSidebarCollapsed ? 'left-4' : 'left-[260px]',
+            )}
+            aria-label={isSidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+          >
+            <TextOutdentIcon
+              size={20}
+              className={cn(
+                'text-gray-500 transition-transform duration-300',
+                isSidebarCollapsed && 'rotate-180',
+              )}
+            />
+          </button>
+
+          {/* chat list main wrapper */}
+          <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+            <Chat
+              chatList={chatList}
+              onSend={handleSend}
+              onFeedback={handleFeedback}
+              isResponding={isResponding}
+              checkCanSend={checkCanSend}
+              visionConfig={visionConfig}
+              fileConfig={fileConfig}
+            />
+          </div>
         </div>
       </div>
     </div>

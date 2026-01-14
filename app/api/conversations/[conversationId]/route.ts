@@ -3,30 +3,23 @@ import { NextResponse } from 'next/server'
 import { getInfo } from '@/app/api/utils/common'
 import { API_KEY, API_URL } from '@/config'
 
-export async function POST(
+export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
-  const body = await request.json()
-  const { name, auto_generate = false } = body
   const { conversationId } = await params
   const { user } = getInfo(request)
 
   try {
-    const difyRequest = {
-      user,
-      ...(auto_generate ? { auto_generate: true } : { name }),
-    }
-
     const response = await fetch(
-      `${API_URL}/conversations/${conversationId}/name`,
+      `${API_URL}/conversations/${conversationId}`,
       {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${API_KEY}`,
         },
-        body: JSON.stringify(difyRequest),
+        body: JSON.stringify({ user }),
       },
     )
 
@@ -40,11 +33,7 @@ export async function POST(
 
     // 处理 204 No Content
     if (response.status === 204) {
-      return NextResponse.json({
-        id: conversationId,
-        name,
-        result: 'success',
-      })
+      return NextResponse.json({ result: 'success' })
     }
 
     const data = await response.json()
